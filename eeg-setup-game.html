@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<title>EEG Lab Setup Game</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: floor plan of the L&C Lab (EEG room + outside desk) on the left, parts tray and notes on the right; stacks on phones. */
+:root{
+  --bg:#eef2f4; --paper:#f8fafb; --ink:#1d2a36; --muted:#5b6b78; --line:#9fb0bc;
+  --room:#e3eaee; --booth:#dfe9e3; --accent:#0f7c8c; --accent-soft:#d3ecef;
+  --ok:#2f8a4e; --bad:#c2412d; --fiber:#d9861c; --chip:#ffffff;
+  --shadow:0 1px 2px rgba(29,42,54,.12),0 4px 14px rgba(29,42,54,.08);
+  --cap-y:#e8b923; --cap-b:#2f6fd0; --cap-r:#d0412f; --amp:#5fbf3a;
+  --f-display:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#121a20; --paper:#18222a; --ink:#e3ebf0; --muted:#93a4b0; --line:#4b5d6a;
+  --room:#1d2932; --booth:#1a2b24; --accent:#3fb6c6; --accent-soft:#16363b;
+  --ok:#5cc07f; --bad:#ec6b55; --fiber:#f0a548; --chip:#202d36;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121a20; --paper:#18222a; --ink:#e3ebf0; --muted:#93a4b0; --line:#4b5d6a;
+  --room:#1d2932; --booth:#1a2b24; --accent:#3fb6c6; --accent-soft:#16363b;
+  --ok:#5cc07f; --bad:#ec6b55; --fiber:#f0a548; --chip:#202d36;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3); color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px}
+.eyebrow{font:600 12px var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin:0 0 4px}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(24px,3.4vw,34px);letter-spacing:-.01em;margin:0;line-height:1.1;text-wrap:balance}
+.sub{color:var(--muted);margin:4px 0 0;max-width:62ch}
+.stats{display:flex;flex-wrap:wrap;gap:18px;align-items:center;font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:13px;color:var(--muted)}
+.stats b{display:block;font-size:20px;color:var(--ink);font-weight:500}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+button.b{font:600 13px var(--f-body);border:1px solid var(--line);background:var(--paper);color:var(--ink);padding:8px 12px;border-radius:6px;cursor:pointer}
+button.b:hover{border-color:var(--accent);color:var(--accent)}
+button.b.primary{background:var(--accent);border-color:var(--accent);color:var(--paper)}
+button.b.primary:hover{color:var(--paper);filter:brightness(1.08)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.main{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+@media (max-width:880px){.main{grid-template-columns:minmax(0,1fr)}.side{order:-1}}
+
+.scene{position:relative;width:100%;aspect-ratio:1000/640;max-width:100%;background:var(--paper);border:1px solid var(--line);border-radius:8px;overflow:hidden;user-select:none}
+.scene svg{position:absolute;inset:0;width:100%;height:100%}
+.scene .wall{fill:none;stroke:var(--ink);stroke-width:3}
+.scene .r-booth{fill:var(--booth)}
+.scene .r-ctrl{fill:var(--room)}
+.scene .furn{fill:var(--paper);stroke:var(--line);stroke-width:1.5}
+.scene .deco{fill:none;stroke:var(--line);stroke-width:1.5}
+.scene .win{stroke:var(--paper);stroke-width:5}
+.scene .cable{fill:none;stroke:var(--accent);stroke-width:2;stroke-dasharray:6 5;opacity:.45}
+.scene .cable.fiber{stroke:var(--fiber)}
+.scene .cable.live{stroke-dasharray:none;opacity:.95;stroke-width:2.5}
+.scene .lbl{font:600 15px var(--f-display);letter-spacing:.08em;text-transform:uppercase;fill:var(--ink)}
+.scene .small{font:500 11px var(--f-mono);fill:var(--muted)}
+.scene .person{fill:var(--paper);stroke:var(--ink);stroke-width:1.5}
+
+.zone{position:absolute;transform:translate(-50%,-50%);width:clamp(28px,6%,60px);aspect-ratio:1;border-radius:50%;
+  border:2px dashed var(--accent);background:color-mix(in srgb,var(--accent-soft) 85%,transparent);color:var(--accent);
+  font:600 clamp(10px,1.35vw,15px) var(--f-mono);display:grid;place-items:center;cursor:pointer;padding:0;transition:transform .15s,background .15s}
+.zone.hover,.zone:not(.filled):hover{transform:translate(-50%,-50%) scale(1.15);background:var(--accent-soft);border-style:solid}
+.zone.filled{border:2px solid var(--ok);background:var(--paper);color:var(--ink);cursor:default;width:auto;min-width:clamp(28px,6%,60px);aspect-ratio:auto;border-radius:8px;padding:3px 5px;gap:1px;z-index:2}
+.zone.filled svg{width:clamp(13px,1.9vw,22px);height:clamp(13px,1.9vw,22px)}
+.zone.filled span{font:600 clamp(7px,.95vw,11px) var(--f-display);white-space:nowrap;letter-spacing:.02em}
+.zone.wrong{animation:shake .35s;border-color:var(--bad);color:var(--bad)}
+.zone.reveal{border-style:solid;border-color:var(--muted);width:auto;aspect-ratio:auto;border-radius:6px;padding:2px 5px}
+.zone.reveal span{font:600 clamp(7px,.95vw,11px) var(--f-display);color:var(--ink);white-space:nowrap}
+@keyframes shake{25%{transform:translate(calc(-50% - 5px),-50%)}75%{transform:translate(calc(-50% + 5px),-50%)}}
+
+.side{display:flex;flex-direction:column;gap:12px}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px}
+.panel h2{font:700 13px var(--f-display);text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:0 0 10px}
+.tray{display:flex;flex-wrap:wrap;gap:8px;min-height:44px}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:7px 10px 7px 8px;background:var(--chip);color:var(--ink);border:1px solid var(--line);border-radius:6px;
+  box-shadow:var(--shadow);font:600 13px var(--f-display);letter-spacing:.01em;cursor:grab;touch-action:none;user-select:none}
+.chip svg{width:20px;height:20px;flex:none}
+.chip.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.chip.dragging{opacity:.3}
+.chip.bounce{animation:pop .4s}
+@keyframes pop{30%{transform:scale(1.08)}}
+.ghost{position:fixed;z-index:50;pointer-events:none;transform:translate(-50%,-50%) rotate(-3deg);box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.fact b{font-family:var(--f-display);font-size:16px;display:block;margin-bottom:2px}
+.fact p{margin:0;color:var(--muted);font-size:14px}
+.fact .room{font:500 11px var(--f-mono);text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:4px}
+.fact.ok b{color:var(--ok)} .fact.bad b{color:var(--bad)}
+.howto{font-size:13px;color:var(--muted);margin:0}
+.legend{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:8px}
+.legend i{display:inline-block;width:26px;height:0;border-top:2.5px solid var(--accent)}
+.legend i.f{border-color:var(--fiber)}
+.done{display:none;background:var(--accent);color:var(--paper);border-radius:8px;padding:14px 16px;font-family:var(--f-display);font-size:18px;font-weight:600}
+.done.show{display:block}
+.done small{display:block;font:400 14px var(--f-body);opacity:.92}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header>
+    <div>
+      <p class="eyebrow">Language &amp; Cognition Lab · EEG training</p>
+      <h1>EEG Lab Setup Game</h1>
+      <p class="sub">Drag each part onto its numbered spot. Half of it lives in the EEG room, half outside. A wrong spot sends the part back with a hint.</p>
+    </div>
+    <div class="stats">
+      <div>placed<b id="sPlaced">0/0</b></div>
+      <div>mistakes<b id="sMiss">0</b></div>
+      <div>time<b id="sTime">0:00</b></div>
+      <div class="btns">
+        <button class="b" id="btnReveal" type="button">Show answers</button>
+        <button class="b primary" id="btnReset" type="button">Restart</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="done" id="done" role="status"></div>
+
+  <div class="main">
+    <div class="scene" id="scene">
+      <svg viewBox="0 0 1000 640" aria-hidden="true">
+        <rect class="r-booth" x="20" y="20" width="600" height="600"/>
+        <rect class="r-ctrl" x="640" y="20" width="340" height="600"/>
+        <defs>
+          <pattern id="carpet" width="14" height="14" patternUnits="userSpaceOnUse"><circle cx="7" cy="7" r="1.1" fill="var(--line)" opacity=".45"/></pattern>
+          <pattern id="tiles" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="var(--line)" stroke-width=".6" opacity=".5"/></pattern>
+        </defs>
+        <rect x="20" y="20" width="600" height="600" fill="url(#carpet)"/>
+        <rect x="640" y="20" width="340" height="600" fill="url(#tiles)"/>
+        <!-- door out of the control room -->
+        <rect x="975" y="80" width="10" height="60" fill="var(--room)"/>
+        <path d="M980 80 L 920 80 A 60 60 0 0 0 980 140" fill="none" stroke="var(--line)" stroke-width="1.5"/>
+        <text class="small" x="944" y="160" text-anchor="middle">door</text>
+        <!-- plant -->
+        <g transform="translate(940,580)">
+          <circle cx="-10" cy="-6" r="11" fill="var(--ok)" opacity=".75"/>
+          <circle cx="9" cy="-9" r="12" fill="var(--ok)" opacity=".9"/>
+          <circle cx="2" cy="8" r="11" fill="var(--ok)" opacity=".6"/>
+          <circle r="7" fill="var(--paper)" stroke="var(--ink)" stroke-width="1.5"/>
+        </g>
+        <!-- recording lamp above the window -->
+        <circle cx="630" cy="38" r="6" fill="var(--bad)"/>
+        <text class="small" x="642" y="42" style="fill:var(--bad)">REC</text>
+        <rect class="wall" x="20" y="20" width="600" height="600"/>
+        <rect class="wall" x="640" y="20" width="340" height="600"/>
+        <!-- window between rooms -->
+        <line class="win" x1="630" y1="60" x2="630" y2="300"/>
+        <line x1="620" y1="60" x2="640" y2="60" stroke="var(--ink)" stroke-width="2"/>
+        <line x1="620" y1="300" x2="640" y2="300" stroke="var(--ink)" stroke-width="2"/>
+        <text class="small" x="630" y="316" text-anchor="middle">window</text>
+
+        <text class="lbl" x="36" y="46">EEG room</text>
+        <text class="small" x="360" y="602">no phones · food · drinks</text>
+        <text class="lbl" x="656" y="46">Outside EEG room</text>
+
+        <!-- participant desk -->
+        <rect class="furn" x="70" y="60" width="520" height="200" rx="4"/>
+        <!-- fixed: keyboard and mouse at the front edge, in reach of the participant -->
+        <rect x="225" y="224" width="120" height="26" rx="3" fill="var(--room)" stroke="var(--ink)" stroke-width="1.5"/>
+        <path d="M235 233h100M235 241h100" stroke="var(--line)" stroke-width="1.5"/>
+        <rect x="355" y="222" width="18" height="28" rx="9" fill="var(--room)" stroke="var(--ink)" stroke-width="1.5"/>
+        <text class="small" x="299" y="218" text-anchor="middle">keyboard + mouse</text>
+        <!-- participant -->
+        <rect class="furn" x="250" y="300" width="100" height="80" rx="14"/>
+        <ellipse class="person" cx="300" cy="330" rx="52" ry="24"/>
+        <circle class="person" cx="300" cy="300" r="25"/>
+        <text class="small" x="300" y="398" text-anchor="middle">participant</text>
+        <!-- second lab mole: in-room experimenter with a gel syringe -->
+        <g transform="translate(462,352) scale(.8)">
+          <ellipse cx="0" cy="52" rx="30" ry="6" fill="var(--ink)" opacity=".12"/>
+          <ellipse cx="0" cy="14" rx="27" ry="34" fill="#8a7262" stroke="var(--ink)" stroke-width="1.5"/>
+          <path d="M-25 0 Q -28 30 -18 46 L 18 46 Q 28 30 25 0 L 9 -6 L 0 14 L -9 -6 Z" fill="#fdfdfb" stroke="var(--ink)" stroke-width="1.5" stroke-linejoin="round"/>
+          <g transform="rotate(-35 -14 20)">
+            <rect x="-30" y="16" width="26" height="8" rx="2" fill="#fff" stroke="var(--ink)" stroke-width="1.2"/>
+            <rect x="-27" y="17.5" width="12" height="5" fill="var(--accent)" opacity=".7"/>
+            <path d="M-4 20h6M-36 20h6M-36 16v8" stroke="var(--ink)" stroke-width="1.4"/>
+            <path d="M2 20h8" stroke="#e8823a" stroke-width="2" stroke-linecap="round"/>
+          </g>
+          <ellipse cx="-13" cy="26" rx="6" ry="4.5" fill="#9fd3dc" stroke="var(--ink)" stroke-width="1"/>
+          <ellipse cx="13" cy="26" rx="6" ry="4.5" fill="#9fd3dc" stroke="var(--ink)" stroke-width="1"/>
+          <ellipse cx="0" cy="-26" rx="21" ry="19" fill="#8a7262" stroke="var(--ink)" stroke-width="1.5"/>
+          <rect x="-17" y="-36" width="34" height="10" rx="5" fill="var(--fiber)" stroke="var(--ink)" stroke-width="1.3"/>
+          <path d="M-12 -33h8" stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity=".8"/>
+          <g transform="translate(0,-14)" stroke="#e57f97" stroke-width="2.2" stroke-linecap="round">
+            <path d="M0 -6v-3M0 6v3M-6 0h-3M6 0h3M-4.5 -4.5l-2 -2M4.5 -4.5l2 -2M-4.5 4.5l-2 2M4.5 4.5l2 2"/>
+          </g>
+          <circle cx="0" cy="-14" r="4.5" fill="#f2a7b5" stroke="var(--ink)" stroke-width="1"/>
+        </g>
+        <text class="small" x="462" y="414" text-anchor="middle">experimenter</text>
+        <!-- prep cart -->
+        <rect class="furn" x="50" y="444" width="270" height="162" rx="4"/>
+        <text class="small" x="60" y="460">prep cart · any order</text>
+        <!-- cap rack -->
+        <rect class="furn" x="360" y="470" width="240" height="110" rx="4"/>
+        <text class="small" x="370" y="572">cap rack</text>
+        <text class="small" x="405" y="488" text-anchor="middle">SMALL</text>
+        <text class="small" x="480" y="488" text-anchor="middle">MEDIUM</text>
+        <text class="small" x="555" y="488" text-anchor="middle">LARGE</text>
+
+        <!-- outside desk, against the window -->
+        <rect class="furn" x="652" y="70" width="150" height="520" rx="4"/>
+        <!-- the lab mole (experimenter) -->
+        <g transform="translate(880,322)">
+          <ellipse cx="0" cy="52" rx="30" ry="6" fill="var(--ink)" opacity=".12"/>
+          <ellipse cx="0" cy="14" rx="27" ry="34" fill="#7a6658" stroke="var(--ink)" stroke-width="1.5"/>
+          <path d="M-25 0 Q -28 30 -18 46 L 18 46 Q 28 30 25 0 L 9 -6 L 0 14 L -9 -6 Z" fill="#fdfdfb" stroke="var(--ink)" stroke-width="1.5" stroke-linejoin="round"/>
+          <rect x="-11" y="10" width="22" height="26" rx="2" fill="#d8c29a" stroke="var(--ink)" stroke-width="1.3"/>
+          <rect x="-5" y="8" width="10" height="4" rx="1" fill="var(--muted)"/>
+          <path d="M-7 18h14M-7 23h14M-7 28h9" stroke="var(--ink)" stroke-width="1" opacity=".6"/>
+          <ellipse cx="-13" cy="26" rx="6" ry="4.5" fill="#f2a7b5" stroke="var(--ink)" stroke-width="1"/>
+          <ellipse cx="13" cy="26" rx="6" ry="4.5" fill="#f2a7b5" stroke="var(--ink)" stroke-width="1"/>
+          <ellipse cx="0" cy="-26" rx="21" ry="19" fill="#7a6658" stroke="var(--ink)" stroke-width="1.5"/>
+          <rect x="-17" y="-36" width="34" height="10" rx="5" fill="var(--accent)" stroke="var(--ink)" stroke-width="1.3"/>
+          <path d="M-12 -33h8" stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity=".8"/>
+          <g transform="translate(0,-14)" stroke="#e57f97" stroke-width="2.2" stroke-linecap="round">
+            <path d="M0 -6v-3M0 6v3M-6 0h-3M6 0h3M-4.5 -4.5l-2 -2M4.5 -4.5l2 -2M-4.5 4.5l-2 2M4.5 4.5l2 2"/>
+          </g>
+          <circle cx="0" cy="-14" r="4.5" fill="#f2a7b5" stroke="var(--ink)" stroke-width="1"/>
+        </g>
+        <text class="small" x="880" y="394" text-anchor="middle">experimenter</text>
+        <!-- speech bubble -->
+        <g transform="translate(880,232)">
+          <rect x="-58" y="-16" width="116" height="26" rx="13" fill="var(--paper)" stroke="var(--ink)" stroke-width="1.3"/>
+          <path d="M-6 10 L 0 20 L 6 10" fill="var(--paper)" stroke="var(--ink)" stroke-width="1.3" stroke-linejoin="round"/>
+          <rect x="-6" y="7" width="12" height="4" fill="var(--paper)"/>
+          <text x="0" y="1" text-anchor="middle" style="font:600 11px var(--f-display);fill:var(--ink)">GND first, then Cz!</text>
+        </g>
+
+        <!-- cables: right angles only, dashed until both ends are placed -->
+        <path class="cable" data-a="sensor" data-b="trigger" d="M370 100 H 490"/>
+        <path class="cable" data-a="trigger" data-b="amp" d="M490 100 V 200"/>
+        <path class="cable" data-a="amp" data-b="rex" d="M490 200 H 390"/>
+        <path class="cable" data-a="power" data-b="rex" d="M150 200 H 390"/>
+        <path class="cable" data-a="cap" data-b="amp" d="M300 300 H 545 V 200 H 490"/>
+        <path class="cable fiber" data-a="rex" data-b="lex" d="M390 200 V 440 H 700 V 470"/>
+        <path class="cable" data-a="lex" data-b="hostpc" d="M700 470 V 545"/>
+        <path class="cable" data-a="subjpc" data-b="mirror" d="M745 170 V 420 H 590 V 40 H 300 V 100"/>
+        <path class="cable" data-a="mic" data-b="subjpc" d="M225 300 V 430 H 775 V 170"/>
+
+        <!-- cable port, drawn over the bundle -->
+        <rect x="614" y="398" width="32" height="44" fill="none" stroke="var(--ink)" stroke-width="2"/>
+        <text class="small" x="630" y="458" text-anchor="middle">port</text>
+      </svg>
+    </div>
+
+    <aside class="side">
+      <div class="panel">
+        <h2>Parts tray</h2>
+        <div class="tray" id="tray"></div>
+      </div>
+      <div class="panel fact" id="fact" aria-live="polite"></div>
+      <div class="panel">
+        <h2>Cables</h2>
+        <div class="legend">
+          <span><i></i>USB, DB25, display and audio cables</span>
+          <span><i class="f"></i>Amber fibre, REX to LEX</span>
+          <span>Lines turn solid once both ends are placed.</span>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+/* ===== Parts list. room: "in" = EEG room, "out" = outside. x/y on the 1000×640 plan. ===== */
+const ITEMS = [
+  {id:"amp",     name:"Amplifiers ×2",     icon:"amp",    room:"in",  x:490,y:200,
+   fact:"ANT Neuro eego amplifiers, 64 channels each. The cap plugs into EEG IN 1 (right) and EEG IN 2 (left) on the front. Each connects to the REX with its own Type-A USB cable. Unplug the charging cable before recording."},
+  {id:"rex",     name:"REX",               icon:"ext",    room:"in",  x:390,y:200,
+   fact:"Remote USB extender (Icron). Stays in the EEG room. It takes power from the power bank by the round-jack cable, the amplifiers plug into it by USB, and the amber fibre runs through the wall to the LEX."},
+  {id:"lex",     name:"LEX",               icon:"ext",    room:"out", x:700,y:470,
+   fact:"Local USB extender. Sits outside and connects to the host PC by USB. Link light = USB to host PC connected; Host light = host PC on; Activity light should blink all through the session. The extenders keep the host PC off the amplifiers, which reduces noise."},
+  {id:"power",   name:"Power bank",        icon:"battery",room:"in",  x:150,y:200,
+   fact:"Powers the REX. Turn it on and set it to 24 V; the REX Power light should come on. Charge it (micro-USB) before experiments, or monthly if unused."},
+  {id:"trigger", name:"Trigger box",       icon:"trig",   room:"in",  x:490,y:100,
+   fact:"White Cedrus box. Connects to the amplifier's back TRIGGER port with the DB25 cable. Before starting, check its light is on and the cable is in the right port."},
+  {id:"sensor",  name:"Light sensor",      icon:"sensor", room:"in",  x:370,y:100,
+   fact:"Stuck on the bottom-right corner of the participant's monitor and wired to the trigger box. It detects the flash shown with each stimulus, so the event marks when the picture actually appeared."},
+  {id:"mirror",  name:"Mirror monitor",    icon:"monitor",room:"in",  x:300,y:100,
+   fact:"The participant's screen in the EEG room. It mirrors the subject PC, which runs the experiment outside."},
+  {id:"mic",     name:"Microphone",        icon:"mic",    room:"in",  x:225,y:300,
+   fact:"On its stand right next to the participant for spoken responses. The cable goes out to the audio interface next to the subject PC."},
+  {id:"cap",     name:"EEG cap (on head)", icon:"capg",   room:"in",  x:300,y:300,
+   fact:"Gel GND first, then Cz, then the other electrodes. Aim for impedance below 20 kΩ. In eego, pick EE-225 for a 64-channel cap or EE-226 for 128 channels."},
+  {id:"capS",    name:"Cap · Yellow",      icon:"capY",   room:"in",  x:405,y:525,
+   fact:"Yellow = small. Measure head circumference with the soft ruler before choosing a cap."},
+  {id:"capM",    name:"Cap · Red",         icon:"capR",   room:"in",  x:480,y:525,
+   fact:"Red = medium (56 cm). The usual starting point; measure to confirm."},
+  {id:"capL",    name:"Cap · Blue",        icon:"capB",   room:"in",  x:555,y:525,
+   fact:"Blue = large. After every session, rinse the cap but keep the connector out of the water; it is not waterproof."},
+  /* prep cart: any prep item fits any prep slot */
+  {id:"gel",     name:"Gel",               icon:"gel",    room:"in",  group:"prep", x:110,y:500,
+   fact:"Conductive gel. Too much gel bridges neighbouring electrodes."},
+  {id:"syringe", name:"Syringe",           icon:"syringe",room:"in",  group:"prep", x:185,y:500,
+   fact:"Filled with gel and fitted with a blunt needle to fill each electrode."},
+  {id:"needle",  name:"Blunt needle",      icon:"needle", room:"in",  group:"prep", x:260,y:500,
+   fact:"Orange-tipped. Single use: the needles cannot be reused."},
+  {id:"towel",   name:"Towel",             icon:"towel",  room:"in",  group:"prep", x:110,y:570,
+   fact:"For wiping off extra gel and drying the participant's hair afterwards."},
+  {id:"clips",   name:"Clips",             icon:"clip",   room:"in",  group:"prep", x:185,y:570,
+   fact:"Hold hair or cables out of the way while you set up the cap."},
+  {id:"ruler",   name:"Soft ruler",        icon:"tape",   room:"in",  group:"prep", x:260,y:570,
+   fact:"Measure head circumference around the forehead and the back of the head, then pick the cap size."},
+  {id:"hostpc",  name:"Host PC",           icon:"laptop", room:"out", x:700,y:545,
+   fact:"Runs the eego software. Check BAT and AMP are coloured at the bottom right, create a New Subject, go to Acquire, then Record starts the impedance check and EEG together. Back up data to OneDrive afterwards."},
+  {id:"subjpc",  name:"Subject PC",        icon:"laptop", room:"out", x:760,y:170,
+   fact:"Runs the experiment script (PsychoPy), drives the participant's monitor and sends event codes. Use only numbers for codes."},
+];
+const ROOM = {in:"EEG room", out:"Outside EEG room"};
+
+const ICONS = {
+  amp:'<rect x="3" y="5" width="18" height="14" rx="3" fill="var(--amp)"/><rect x="6" y="14" width="5" height="3" rx=".6" fill="#fff"/><rect x="13" y="14" width="5" height="3" rx=".6" fill="#fff"/>',
+  ext:'<rect x="3" y="6" width="18" height="12" rx="2" fill="none" stroke="var(--ink)" stroke-width="2"/><rect x="8" y="8" width="7" height="8" fill="var(--amp)"/><circle cx="18" cy="15" r="1" fill="var(--ok)"/>',
+  battery:'<rect x="6" y="2" width="12" height="20" rx="2" fill="none" stroke="var(--ink)" stroke-width="2"/><rect x="8.5" y="5" width="7" height="4" fill="var(--accent)"/>',
+  trig:'<rect x="3" y="6" width="18" height="12" rx="2" fill="var(--paper)" stroke="var(--ink)" stroke-width="2"/><circle cx="17" cy="10" r="1.5" fill="var(--ok)"/><path d="M6 14h8" stroke="var(--ink)" stroke-width="2"/>',
+  capg:'<path d="M3 16a9 9 0 0 1 18 0z" fill="var(--muted)"/><circle cx="8" cy="12" r="1.2" fill="var(--paper)"/><circle cx="12" cy="10" r="1.2" fill="var(--paper)"/><circle cx="16" cy="12" r="1.2" fill="var(--paper)"/>',
+  capY:'<path d="M3 16a9 9 0 0 1 18 0z" fill="var(--cap-y)"/><circle cx="8" cy="12" r="1.2" fill="#fff"/><circle cx="12" cy="10" r="1.2" fill="#fff"/><circle cx="16" cy="12" r="1.2" fill="#fff"/>',
+  capB:'<path d="M3 16a9 9 0 0 1 18 0z" fill="var(--cap-b)"/><circle cx="8" cy="12" r="1.2" fill="#fff"/><circle cx="12" cy="10" r="1.2" fill="#fff"/><circle cx="16" cy="12" r="1.2" fill="#fff"/>',
+  capR:'<path d="M3 16a9 9 0 0 1 18 0z" fill="var(--cap-r)"/><circle cx="8" cy="12" r="1.2" fill="#fff"/><circle cx="12" cy="10" r="1.2" fill="#fff"/><circle cx="16" cy="12" r="1.2" fill="#fff"/>',
+  gel:'<rect x="5" y="9" width="14" height="11" rx="2" fill="none" stroke="var(--ink)" stroke-width="2"/><rect x="4" y="5" width="16" height="4" rx="1" fill="var(--ink)"/>',
+  syringe:'<path d="M4 20l3-3M7 17l9-9 2 2-9 9zM14 6l4 4M16 4l4 4" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/>',
+  needle:'<path d="M5 19L15 9" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/><rect x="14" y="3" width="6" height="6" rx="1" transform="rotate(45 17 6)" fill="#e8823a"/>',
+  monitor:'<rect x="3" y="4" width="18" height="12" rx="1.5" fill="none" stroke="var(--ink)" stroke-width="2"/><path d="M9 20h6M12 16v4" stroke="var(--ink)" stroke-width="2"/>',
+  laptop:'<rect x="5" y="5" width="14" height="10" rx="1" fill="none" stroke="var(--ink)" stroke-width="2"/><path d="M2 18h20" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/>',
+  sensor:'<circle cx="12" cy="12" r="4" fill="var(--accent)"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2 2M16.4 16.4l2 2M5.6 18.4l2-2M16.4 7.6l2-2" stroke="var(--ink)" stroke-width="1.8" stroke-linecap="round"/>',
+  resp:'<rect x="3" y="7" width="18" height="10" rx="2" fill="none" stroke="var(--ink)" stroke-width="2"/><circle cx="8" cy="12" r="2" fill="var(--cap-b)"/><circle cx="16" cy="12" r="2" fill="var(--cap-r)"/>',
+  mouse:'<rect x="7" y="3" width="10" height="18" rx="5" fill="none" stroke="var(--ink)" stroke-width="2"/><path d="M12 3v6" stroke="var(--ink)" stroke-width="2"/>',
+  towel:'<path d="M4 6h16v12H4z" fill="none" stroke="var(--ink)" stroke-width="2"/><path d="M4 10h16M4 14h16" stroke="var(--line)" stroke-width="1.5"/>',
+  clip:'<path d="M4 15l9-9 3 3-9 9H4z" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/><path d="M14 5l5 5" stroke="var(--ok)" stroke-width="3" stroke-linecap="round"/>',
+  tape:'<circle cx="10" cy="12" r="7" fill="none" stroke="var(--ink)" stroke-width="2"/><circle cx="10" cy="12" r="2" fill="var(--ink)"/><path d="M17 15h5" stroke="var(--cap-y)" stroke-width="3"/>',
+  mic:'<rect x="9" y="2" width="6" height="11" rx="3" fill="var(--ink)"/><path d="M6 11a6 6 0 0 0 12 0M12 17v5M8 22h8" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/>',
+};
+const svg = k => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg>`;
+
+const $ = s => document.querySelector(s);
+const scene = $("#scene"), tray = $("#tray"), fact = $("#fact");
+let placed = new Set(), misses = 0, t0 = null, timer = null, selected = null, revealed = false;
+const INTRO = '<h2>What it does</h2><p class="howto">Place a part correctly to see what it does in our lab. On a phone, tap a part, then tap a spot.</p>';
+
+function fmt(s){return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
+function tick(){ if(t0) $("#sTime").textContent = fmt(Math.floor((Date.now()-t0)/1000)); }
+function startClock(){ if(!t0){ t0 = Date.now(); timer = setInterval(tick,500);} }
+function stats(){ $("#sPlaced").textContent = placed.size+"/"+ITEMS.length; $("#sMiss").textContent = misses; }
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
+
+function build(){
+  scene.querySelectorAll(".zone").forEach(z=>z.remove());
+  tray.innerHTML=""; placed.clear(); misses=0; selected=null; revealed=false;
+  clearInterval(timer); t0=null; $("#sTime").textContent="0:00";
+  $("#done").className="done"; $("#done").textContent="";
+  fact.className="panel fact"; fact.innerHTML=INTRO;
+  shuffle(ITEMS).forEach((it,i)=>{
+    const z=document.createElement("button");
+    z.type="button"; z.className="zone"; z.dataset.id=it.id; z.id="zone-"+it.id;
+    z.style.left=(it.x/10)+"%"; z.style.top=(it.y/6.4)+"%";
+    z.textContent=i+1; z.setAttribute("aria-label","Spot "+(i+1));
+    z.addEventListener("click",()=>{ if(selected) tryPlace(selected,z); });
+    scene.appendChild(z);
+  });
+  shuffle(ITEMS).forEach(it=>{
+    const c=document.createElement("button");
+    c.type="button"; c.className="chip"; c.dataset.id=it.id; c.id="chip-"+it.id;
+    c.innerHTML=svg(it.icon)+"<span>"+it.name+"</span>";
+    bindDrag(c); tray.appendChild(c);
+  });
+  updateCables(); stats();
+}
+
+function select(c){
+  if(selected) selected.classList.remove("sel");
+  selected = (selected===c)?null:c;
+  if(selected) selected.classList.add("sel");
+}
+
+function tryPlace(chip,zone){
+  if(zone.classList.contains("filled")) return;
+  startClock();
+  const it = ITEMS.find(i=>i.id===chip.dataset.id);
+  const target = ITEMS.find(i=>i.id===zone.dataset.id);
+  if(zone.dataset.id===it.id || (it.group && it.group===target.group)){
+    zone.className="zone filled";
+    zone.innerHTML=svg(it.icon)+"<span>"+it.name+"</span>";
+    zone.setAttribute("aria-label",it.name+" placed");
+    chip.remove(); if(selected===chip) selected=null;
+    placed.add(it.id);
+    fact.className="panel fact ok";
+    fact.innerHTML='<h2>What it does</h2><div class="room">'+ROOM[it.room]+'</div><b>'+it.name+'</b><p>'+it.fact+'</p>';
+    updateCables(); stats(); checkDone();
+  } else {
+    misses++; stats();
+    zone.classList.remove("wrong"); void zone.offsetWidth; zone.classList.add("wrong");
+    chip.classList.remove("bounce"); void chip.offsetWidth; chip.classList.add("bounce");
+    const hint = target.room===it.room ? "Right room, wrong spot." : "Wrong room: this part belongs "+(it.room==="in"?"in the EEG room.":"outside the EEG room.");
+    fact.className="panel fact bad";
+    fact.innerHTML='<h2>Not there</h2><b>'+it.name+'</b><p>'+hint+'</p>';
+  }
+}
+
+function updateCables(){
+  scene.querySelectorAll(".cable").forEach(p=>{
+    p.classList.toggle("live", placed.has(p.dataset.a) && placed.has(p.dataset.b));
+  });
+}
+
+function checkDone(){
+  if(placed.size!==ITEMS.length) return;
+  clearInterval(timer);
+  const secs = Math.floor((Date.now()-t0)/1000);
+  const d=$("#done");
+  d.innerHTML = (revealed?"All placed (with answers shown)":misses===0?"Perfect setup.":"Lab is set up.")+
+    "<small>"+ITEMS.length+" parts in "+fmt(secs)+" with "+misses+" mistake"+(misses===1?"":"s")+". Press Restart to try again.</small>";
+  d.classList.add("show");
+}
+
+function bindDrag(chip){
+  chip.addEventListener("pointerdown",e=>{
+    if(e.button!==0) return;
+    const sx=e.clientX, sy=e.clientY; let ghost=null, over=null;
+    chip.setPointerCapture(e.pointerId);
+    const move=ev=>{
+      if(!ghost && Math.hypot(ev.clientX-sx,ev.clientY-sy)>6){
+        ghost=chip.cloneNode(true); ghost.classList.add("ghost"); ghost.classList.remove("sel");
+        document.body.appendChild(ghost); chip.classList.add("dragging");
+      }
+      if(ghost){
+        ghost.style.left=ev.clientX+"px"; ghost.style.top=ev.clientY+"px";
+        const el=document.elementFromPoint(ev.clientX,ev.clientY);
+        const z=el&&el.closest(".zone:not(.filled)");
+        if(over&&over!==z) over.classList.remove("hover");
+        over=z; if(z) z.classList.add("hover");
+      }
+    };
+    const up=ev=>{
+      chip.removeEventListener("pointermove",move);
+      chip.removeEventListener("pointerup",up);
+      chip.removeEventListener("pointercancel",up);
+      if(over) over.classList.remove("hover");
+      if(ghost){ ghost.remove(); chip.classList.remove("dragging"); if(over) tryPlace(chip,over); }
+      else if(ev.type==="pointerup") select(chip);
+    };
+    chip.addEventListener("pointermove",move);
+    chip.addEventListener("pointerup",up);
+    chip.addEventListener("pointercancel",up);
+  });
+  chip.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); select(chip);} });
+}
+
+$("#btnReset").addEventListener("click",build);
+$("#btnReveal").addEventListener("click",()=>{
+  revealed=true;
+  scene.querySelectorAll(".zone:not(.filled)").forEach(z=>{
+    const it=ITEMS.find(i=>i.id===z.dataset.id);
+    z.classList.add("reveal"); z.innerHTML='<span>'+(it.group==="prep"?"Prep item":it.name)+'</span>';
+  });
+});
+
+build();
+</script>
+
+</body>
+</html>
